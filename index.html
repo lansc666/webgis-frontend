@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>WebGIS 矢量数据管理系统</title>
+  <!-- 引入 OpenLayers 官方样式与JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css">
+  <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
+  <style>
+    body { margin: 0; display: flex; height: 100vh; }
+    #map { flex: 3; height: 100%; }
+    #sidebar { flex: 1; border-left: 1px solid #ccc; padding: 10px; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="sidebar">
+    <h3>属性面板</h3>
+    <div id="table-container">暂无选中要素</div>
+  </div>
+  <script type="module" src="js/map.js"></script>
+  <script type="module" src="js/ui.js"></script>
+</body>
+</html>
