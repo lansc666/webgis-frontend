@@ -2,23 +2,144 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebGIS 矢量数据管理系统</title>
   <!-- 引入 OpenLayers 官方样式与JS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css">
   <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
-  <style>
-    body { margin: 0; display: flex; height: 100vh; }
-    #map { flex: 3; height: 100%; }
-    #sidebar { flex: 1; border-left: 1px solid #ccc; padding: 10px; }
-  </style>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="map"></div>
-  <div id="sidebar">
-    <h3>属性面板</h3>
-    <div id="table-container">暂无选中要素</div>
-  </div>
-  <script type="module" src="js/map.js"></script>
-  <script type="module" src="js/ui.js"></script>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">WEBGIS / 矢量数据管理</p>
+      <h1>地图工作台</h1>
+    </div>
+    <span id="app-mode" class="mode-badge">公开体验 · 临时编辑</span>
+  </header>
+
+  <p id="temporary-notice" class="notice">临时编辑，刷新后重置。当前页面仅完成布局，操作功能待接入。</p>
+
+  <main class="workspace">
+    <section class="map-panel" aria-label="地图与工具">
+      <div id="map-toolbar" class="toolbar" role="group" aria-label="地图工具">
+        <button type="button" data-mode="navigate" aria-pressed="true" disabled>漫游</button>
+        <button type="button" data-mode="select" aria-pressed="false" disabled>点选</button>
+        <button type="button" data-mode="box" aria-pressed="false" disabled>框选</button>
+        <span class="toolbar-divider" aria-hidden="true"></span>
+        <button type="button" data-mode="drawPoint" aria-pressed="false" disabled>绘制点</button>
+        <button type="button" data-mode="drawLine" aria-pressed="false" disabled>绘制线</button>
+        <button type="button" data-mode="drawPolygon" aria-pressed="false" disabled>绘制面</button>
+        <button type="button" data-mode="modify" aria-pressed="false" disabled>修改几何</button>
+      </div>
+      <div class="map-stage">
+        <div id="map" aria-label="地图显示区域"></div>
+        <!-- 地图初始化成功后，由集成代码隐藏此占位提示。 -->
+        <div id="map-placeholder" class="map-placeholder">
+          <span class="placeholder-symbol" aria-hidden="true">＋</span>
+          <h2>地图显示区域</h2>
+          <p>地图模块接入后，可在此浏览、选择和编辑要素。</p>
+        </div>
+      </div>
+      <footer class="map-footer">
+        <span id="current-layer-label">当前图层：未选择</span>
+        <span id="selection-count">已选择 0 个要素</span>
+      </footer>
+    </section>
+
+    <aside id="sidebar" class="sidebar" aria-label="图层与属性面板">
+      <section class="panel" aria-labelledby="layers-heading">
+        <h2 id="layers-heading">图层</h2>
+        <label for="layer-select">当前图层</label>
+        <select id="layer-select" disabled>
+          <option value="">暂无图层</option>
+        </select>
+        <p id="layer-info" class="help-text">创建图层后开始绘制；绘制类型需与图层一致。</p>
+        <details>
+          <summary>创建图层</summary>
+          <form id="create-layer-form">
+            <label for="layer-name">图层名称</label>
+            <input id="layer-name" name="name" type="text" maxlength="100" placeholder="例如：校园设施" required disabled>
+            <label for="geometry-family">几何类型</label>
+            <select id="geometry-family" name="geometry_family" required disabled>
+              <option value="point">点图层</option>
+              <option value="line">线图层</option>
+              <option value="polygon">面图层</option>
+            </select>
+            <button id="create-layer-button" type="submit" disabled>创建图层</button>
+          </form>
+        </details>
+      </section>
+
+      <section class="panel" aria-labelledby="properties-heading">
+        <div class="section-heading">
+          <h2 id="properties-heading">要素属性</h2>
+          <span id="feature-count" class="count-badge">0 个要素</span>
+        </div>
+        <p class="help-text">选择表格行可选中对应要素，地图选择也会同步到这里。</p>
+        <div id="table-container" class="table-container" role="region" aria-label="要素属性表" tabindex="0">
+          <p class="empty-state">暂无要素，请先选择或创建图层。</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="editing-heading">
+        <div class="section-heading">
+          <h2 id="editing-heading">当前编辑</h2>
+          <span id="draft-status" class="count-badge">无草稿</span>
+        </div>
+        <div id="properties-editor" class="empty-state">绘制或修改要素后，可在此确认属性并提交。</div>
+        <div class="action-row">
+          <button id="save-button" class="primary-button" type="button" disabled>应用到当前页面</button>
+          <button id="cancel-button" type="button" disabled>取消草稿</button>
+        </div>
+        <button id="delete-button" class="danger-button" type="button" disabled>删除选中要素</button>
+        <p class="help-text">修改和删除仅支持单个选中要素。</p>
+      </section>
+
+      <!-- initUI 根据 appMode 显示文件入口，仅 demo 模式可用。 -->
+      <section id="file-panel" class="panel" aria-labelledby="files-heading" hidden>
+        <h2 id="files-heading">Shapefile 文件</h2>
+        <label for="import-file">选择 ZIP 文件</label>
+        <input id="import-file" type="file" accept=".zip,application/zip" aria-describedby="import-help" disabled>
+        <p id="import-help" class="help-text">最大 20 MiB。ZIP 中需包含一组同名 .shp、.shx、.dbf、.prj 文件。</p>
+        <div class="action-row">
+          <button id="import-button" type="button" disabled>导入 ZIP</button>
+          <button id="export-button" type="button" disabled>导出当前图层</button>
+        </div>
+        <p class="help-text">导出包含当前图层全部已保存要素，不包含未保存草稿。</p>
+        <div id="import-result" role="status" aria-live="polite"></div>
+      </section>
+
+      <section id="reset-panel" class="panel" aria-labelledby="reset-heading">
+        <h2 id="reset-heading">临时数据</h2>
+        <p class="help-text">恢复后将丢弃本页全部修改，并重新加载初始样例。</p>
+        <button id="reset-button" type="button" disabled>恢复初始数据</button>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="status-bar">
+    <p id="app-status" role="status" aria-live="polite">页面布局已就绪 · 等待功能接入</p>
+    <p id="app-error" class="error-message" role="alert" hidden></p>
+  </footer>
+
+  <dialog id="draft-dialog" aria-labelledby="draft-dialog-title" aria-describedby="draft-dialog-description">
+    <h2 id="draft-dialog-title">处理当前草稿</h2>
+    <p id="draft-dialog-description">当前修改尚未提交，请选择如何处理后再继续。</p>
+    <form method="dialog" class="dialog-actions">
+      <button id="draft-submit-button" class="primary-button" value="submit">应用到当前页面</button>
+      <button value="discard">放弃草稿</button>
+      <button value="cancel" autofocus>返回编辑</button>
+    </form>
+  </dialog>
+  <noscript><p class="notice">请启用 JavaScript 以使用地图编辑功能。</p></noscript>
+  <!-- 统筹人提供 js/app.js 后，在此接入唯一模块入口；由它初始化地图和 UI。 -->
+  <!-- 独立 UI 调试入口；正常页面不启动调试模块。集成 app.js 时移除本段。 -->
+  <script type="module">
+    const previewMode = new URLSearchParams(location.search).get('ui-preview');
+    if (previewMode === 'public' || previewMode === 'demo') {
+      import('./js/ui-preview.js');
+    }
+  </script>
 </body>
 </html>
