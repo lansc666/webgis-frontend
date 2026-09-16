@@ -3,25 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f7f3">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <title>WebGIS 矢量数据管理系统</title>
   <!-- 引入 OpenLayers 官方样式与JS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css">
-  <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <a class="skip-link" href="#workspace">跳到工作台</a>
   <header class="app-header">
-    <div>
-      <p class="eyebrow">WEBGIS / 矢量数据管理</p>
-      <h1>地图工作台</h1>
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M5 12 20 4l15 8-15 8L5 12Zm0 8 15 8 15-8M5 28l15 8 15-8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="12" r="2" fill="currentColor"/></svg>
+      <div>
+        <p class="eyebrow"><span translate="no">WEBGIS</span> / 矢量数据管理</p>
+        <h1>地图工作台</h1>
+      </div>
     </div>
-    <span id="app-mode" class="mode-badge">公开体验 · 临时编辑</span>
+    <div class="header-meta">
+      <span class="header-context">浏览 · 选择 · 编辑</span>
+      <span id="app-mode" class="mode-badge">公开体验 · 临时编辑</span>
+    </div>
   </header>
 
-  <p id="temporary-notice" class="notice">临时编辑，刷新后重置。当前页面仅完成布局，操作功能待接入。</p>
+  <p id="temporary-notice" class="notice">UI 已就绪，地图与数据服务待接入。可从下方进入独立体验。</p>
 
-  <main class="workspace">
-    <section class="map-panel" aria-label="地图与工具">
+  <nav class="section-nav" aria-label="工作区快速导航">
+    <a href="#map-panel">地图</a>
+    <a href="#properties-panel">属性表</a>
+    <a href="#layers-panel">图层</a>
+    <a href="#editing-panel">当前编辑</a>
+  </nav>
+
+  <main id="workspace" class="workspace" tabindex="-1">
+    <section id="map-panel" class="map-panel" aria-label="地图与工具" tabindex="-1">
       <div id="map-toolbar" class="toolbar" role="group" aria-label="地图工具">
         <button type="button" data-mode="navigate" aria-pressed="true" disabled>漫游</button>
         <button type="button" data-mode="select" aria-pressed="false" disabled>点选</button>
@@ -32,13 +48,19 @@
         <button type="button" data-mode="drawPolygon" aria-pressed="false" disabled>绘制面</button>
         <button type="button" data-mode="modify" aria-pressed="false" disabled>修改几何</button>
       </div>
+      <p id="tool-hint" class="tool-hint">先选择图层，再使用对应的点、线或面工具。</p>
       <div class="map-stage">
         <div id="map" aria-label="地图显示区域"></div>
         <!-- 地图初始化成功后，由集成代码隐藏此占位提示。 -->
         <div id="map-placeholder" class="map-placeholder">
           <span class="placeholder-symbol" aria-hidden="true">＋</span>
-          <h2>地图显示区域</h2>
-          <p>地图模块接入后，可在此浏览、选择和编辑要素。</p>
+          <h2>从一个图层开始</h2>
+          <p>地图与数据模块待接入。你可以先体验工具栏、属性表和编辑流程。</p>
+          <div class="preview-entry-links">
+            <a class="button-link" href="?ui-preview=public">体验临时编辑界面</a>
+            <a href="?ui-preview=demo">查看数据库模式界面</a>
+          </div>
+          <p class="placeholder-note">独立体验使用模拟数据，不连接数据库。</p>
         </div>
       </div>
       <footer class="map-footer">
@@ -47,61 +69,87 @@
       </footer>
     </section>
 
+    <section id="properties-panel" class="panel attributes-panel" aria-labelledby="properties-heading" tabindex="-1">
+      <div class="section-heading">
+        <h2 id="properties-heading">要素属性表</h2>
+        <span id="feature-count" class="count-badge">0 个要素</span>
+      </div>
+      <div class="table-controls">
+        <div class="table-search">
+          <label for="feature-search" class="sr-only">查找要素 ID 或属性</label>
+          <input id="feature-search" name="feature-search" type="search" placeholder="查找要素 ID 或属性…" autocomplete="off" disabled>
+        </div>
+        <label class="inline-check" for="selected-only"><input id="selected-only" name="selected-only" type="checkbox" disabled>仅看已选</label>
+        <button id="clear-selection" type="button" disabled>清除选择</button>
+        <button id="clear-filters" type="button" disabled>清除筛选</button>
+      </div>
+      <p id="table-selection-summary" class="field-help">勾选可多选，点选行可单选；选择与地图同步。</p>
+      <div id="table-container" class="table-container" role="region" aria-label="要素属性表" tabindex="0">
+        <p class="empty-state">暂无要素，请先选择或创建图层。</p>
+      </div>
+      <nav class="table-pagination" aria-label="属性表分页">
+        <p id="table-summary" role="status" aria-live="polite" aria-atomic="true">暂无要素</p>
+        <div class="pagination-actions">
+          <button id="table-prev" type="button" aria-label="上一页要素" disabled>上一页</button>
+          <span id="table-page" class="page-number">1 / 1</span>
+          <button id="table-next" type="button" aria-label="下一页要素" disabled>下一页</button>
+        </div>
+      </nav>
+    </section>
+
     <aside id="sidebar" class="sidebar" aria-label="图层与属性面板">
-      <section class="panel" aria-labelledby="layers-heading">
-        <h2 id="layers-heading">图层</h2>
+      <section id="layers-panel" class="panel" aria-labelledby="layers-heading" tabindex="-1">
+        <div class="section-heading">
+          <h2 id="layers-heading">图层</h2>
+          <span id="layer-type-badge" class="count-badge">未选择</span>
+        </div>
         <label for="layer-select">当前图层</label>
-        <select id="layer-select" disabled>
+        <select id="layer-select" name="layer" disabled>
           <option value="">暂无图层</option>
         </select>
         <p id="layer-info" class="help-text">创建图层后开始绘制；绘制类型需与图层一致。</p>
-        <details>
+        <details id="create-layer-details">
           <summary>创建图层</summary>
-          <form id="create-layer-form">
-            <label for="layer-name">图层名称</label>
-            <input id="layer-name" name="name" type="text" maxlength="100" placeholder="例如：校园设施" required disabled>
+          <form id="create-layer-form" novalidate>
+            <label for="layer-name">图层名称 <span class="required-label">必填</span></label>
+            <input id="layer-name" name="name" type="text" maxlength="100" placeholder="例如：校园设施…" autocomplete="off" aria-describedby="layer-name-help layer-name-error" required disabled>
+            <p id="layer-name-help" class="field-help">1–100 个字符，点、线、面分别建层。</p>
+            <p id="layer-name-error" class="field-error" aria-live="polite" hidden></p>
             <label for="geometry-family">几何类型</label>
             <select id="geometry-family" name="geometry_family" required disabled>
               <option value="point">点图层</option>
               <option value="line">线图层</option>
               <option value="polygon">面图层</option>
             </select>
-            <button id="create-layer-button" type="submit" disabled>创建图层</button>
+            <button id="create-layer-button" type="submit" aria-describedby="layer-action-error" disabled>创建图层</button>
+            <p id="layer-action-error" class="field-error" hidden></p>
           </form>
         </details>
       </section>
 
-      <section class="panel" aria-labelledby="properties-heading">
-        <div class="section-heading">
-          <h2 id="properties-heading">要素属性</h2>
-          <span id="feature-count" class="count-badge">0 个要素</span>
-        </div>
-        <p class="help-text">选择表格行可选中对应要素，地图选择也会同步到这里。</p>
-        <div id="table-container" class="table-container" role="region" aria-label="要素属性表" tabindex="0">
-          <p class="empty-state">暂无要素，请先选择或创建图层。</p>
-        </div>
-      </section>
-
-      <section class="panel" aria-labelledby="editing-heading">
+      <section id="editing-panel" class="panel" aria-labelledby="editing-heading" tabindex="-1">
         <div class="section-heading">
           <h2 id="editing-heading">当前编辑</h2>
           <span id="draft-status" class="count-badge">无草稿</span>
         </div>
-        <div id="properties-editor" class="empty-state">绘制或修改要素后，可在此确认属性并提交。</div>
-        <div class="action-row">
-          <button id="save-button" class="primary-button" type="button" disabled>应用到当前页面</button>
-          <button id="cancel-button" type="button" disabled>取消草稿</button>
+        <div id="properties-editor" class="empty-state" role="region" aria-label="当前要素属性，只读；长内容可滚动查看" tabindex="0">绘制或修改要素后，可在此确认属性并提交。</div>
+        <div class="action-row edit-actions">
+          <button id="save-button" class="primary-button" type="button" aria-describedby="edit-hint editing-error" disabled>应用到当前页面</button>
+          <button id="cancel-button" type="button" aria-describedby="editing-error" disabled>取消草稿</button>
         </div>
-        <button id="delete-button" class="danger-button" type="button" disabled>删除选中要素</button>
-        <p class="help-text">修改和删除仅支持单个选中要素。</p>
+        <button id="delete-button" class="danger-button" type="button" aria-describedby="edit-hint editing-error" disabled>删除选中要素</button>
+        <p id="editing-error" class="field-error" hidden></p>
+        <p id="edit-hint" class="help-text">修改和删除仅支持单个选中要素。</p>
       </section>
 
       <!-- initUI 根据 appMode 显示文件入口，仅 demo 模式可用。 -->
       <section id="file-panel" class="panel" aria-labelledby="files-heading" hidden>
         <h2 id="files-heading">Shapefile 文件</h2>
         <label for="import-file">选择 ZIP 文件</label>
-        <input id="import-file" type="file" accept=".zip,application/zip" aria-describedby="import-help" disabled>
+        <input id="import-file" name="file" type="file" accept=".zip,application/zip" aria-describedby="import-help import-error" disabled>
         <p id="import-help" class="help-text">最大 20 MiB。ZIP 中需包含一组同名 .shp、.shx、.dbf、.prj 文件。</p>
+        <p id="import-error" class="field-error" aria-live="polite" hidden></p>
+        <p id="import-file-info" class="field-help" hidden></p>
         <div class="action-row">
           <button id="import-button" type="button" disabled>导入 ZIP</button>
           <button id="export-button" type="button" disabled>导出当前图层</button>
@@ -115,11 +163,20 @@
         <p class="help-text">恢复后将丢弃本页全部修改，并重新加载初始样例。</p>
         <button id="reset-button" type="button" disabled>恢复初始数据</button>
       </section>
+      <details class="panel usage-help">
+        <summary>操作说明</summary>
+        <ol>
+          <li>选择图层，对应的点、线或面工具会启用。</li>
+          <li>在地图或属性表选中要素，可用复选框多选。</li>
+          <li>完成绘制或修改后，在“当前编辑”中提交草稿。</li>
+        </ol>
+        <p class="help-text">属性目前只读。临时编辑刷新后重置，数据库保存需本地服务支持。</p>
+      </details>
     </aside>
   </main>
 
   <footer class="status-bar">
-    <p id="app-status" role="status" aria-live="polite">页面布局已就绪 · 等待功能接入</p>
+    <p id="app-status" role="status" aria-live="polite" aria-atomic="true">页面布局已就绪 · 等待功能接入</p>
     <p id="app-error" class="error-message" role="alert" hidden></p>
   </footer>
 
